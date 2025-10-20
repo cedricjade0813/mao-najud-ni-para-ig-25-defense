@@ -5,7 +5,8 @@ session_start();
 
 // Function to send email using cedricjade13@gmail.com as SMTP account
 function sendEmailToCedric($name, $email, $message) {
-    $mail = new PHPMailer(true);
+    /** @var PHPMailer\PHPMailer\PHPMailer $mail */
+    $mail = new PHPMailer\PHPMailer\PHPMailer(true);
     try {
         // Use cedricjade13@gmail.com as the SMTP account (for authentication)
         $mail->isSMTP();
@@ -24,7 +25,7 @@ function sendEmailToCedric($name, $email, $message) {
         $mail->addReplyTo($email, $name);
         
         $mail->isHTML(false);
-        $mail->Subject = 'Contact Us Message from ' . $name;
+        $mail->Subject = 'Message from ' . $name;
         $mail->Body = "Dear Clinic Management Team,
 
 A new contact us message has been received from " . htmlspecialchars($name) . " (" . htmlspecialchars($email) . ").
@@ -62,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['contact_submit'])) {
         $contact_message = 'Please enter a valid email address.';
     } else {
         // Send email using PHPMailer
-        $email_subject = "Contact Us Message from " . htmlspecialchars($contact_name);
+        $email_subject = "Message from " . htmlspecialchars($contact_name);
         $email_body = "Dear Clinic Management Team,
 
 A new contact us message has been received from " . htmlspecialchars($contact_name) . " (" . htmlspecialchars($contact_email) . ").
@@ -1159,7 +1160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
          <div class="flex flex-col md:flex-row justify-between items-center md:items-center">
            <div class="mb-3 md:mb-0">
              <div class="flex flex-row items-center space-x-3 md:space-x-4">
-               <span class="font-['Pacifico'] text-white mobile-tiny-footer-scms">SCMS</span>
+               <span class="font-['Pacifico'] text-white mobile-tiny-footer-scms">iCMS</span>
                <span class="text-gray-400 mobile-tiny-footer-copyright">© 2025 Clinic Management System. All rights reserved.</span>
              </div>
            </div>
