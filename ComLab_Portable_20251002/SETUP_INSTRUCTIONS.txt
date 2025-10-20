@@ -1,0 +1,46 @@
+# ComLab Portable Server Package
+
+## 🚀 Quick Setup on ANY Laptop:
+
+### Step 1: Copy Files
+1. Copy this entire folder to the new laptop
+2. Place it anywhere you want (Desktop, Documents, etc.)
+
+### Step 2: Run Auto-Setup
+1. Right-click on AUTO_SETUP_NEW_LAPTOP.bat
+2. Select "Run as administrator"
+3. Wait for setup to complete
+4. Done! Your server is ready!
+
+## 🌐 Access Your Website:
+- From this computer: http://localhost
+- From other computers: http://[your-ip-address]
+- Find your IP: http://localhost/get_my_ip.php
+
+## 📁 Files Included:
+- AUTO_SETUP_NEW_LAPTOP.bat (Main setup script)
+- restore_original_config.bat (Restore XAMPP)
+- get_my_ip.php (Find your IP address)
+- lab_server_info.php (Server information)
+- check_network_status.php (Monitor server)
+- STUDENT_CONNECTION_GUIDE.md (Instructions for classmates)
+- All your ComLab project files
+
+## 🔧 Requirements:
+- XAMPP installed on target computer
+- Administrator privileges
+- Windows operating system
+
+## 🎯 What This Package Does:
+- Automatically configures Apache for network access
+- Sets up Windows Firewall rules
+- Creates virtual host configuration
+- Starts the ComLab server
+- Provides connection information
+
+## 📞 Need Help?
+- Check the setup instructions above
+- Make sure XAMPP is installed
+- Run as Administrator
+
+Your ComLab project is now portable! 🚀

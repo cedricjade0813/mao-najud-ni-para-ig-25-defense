@@ -1,0 +1,6 @@
+*.log
+*.tmp
+.git
+node_modules
+uploads\temp
+exclude_list.txt

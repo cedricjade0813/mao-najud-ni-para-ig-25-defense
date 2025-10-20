@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<useCaseDiagram name="Clinic Management System" version="1.0">
+    <metadata>
+        <title>Clinic Management System - Use Case Diagram</title>
+        <description>Use Case Diagram for a comprehensive clinic management system with four actor types and multiple use cases</description>
+        <created>2024</created>
+        <author>System Analyst</author>
+    </metadata>
+    
+    <!-- Actors Definition -->
+    <actors>
+        <actor id="Student" name="Student" type="primary" position="left">
+            <description>Patient/student users who can book appointments and view their medical information</description>
+        </actor>
+        <actor id="Faculty" name="Faculty" type="primary" position="left">
+            <description>Faculty members who can access patient profiles and view medical history</description>
+        </actor>
+        <actor id="Staff" name="Staff" type="primary" position="right">
+            <description>Medical personnel who manage appointments, prescriptions, and patient care</description>
+        </actor>
+        <actor id="Admin" name="Admin" type="primary" position="right">
+            <description>System administrators who manage users, system configuration, and data backup</description>
+        </actor>
+    </actors>
+    
+    <!-- System Boundary -->
+    <systemBoundary name="Clinic Management System">
+        
+        <!-- Core Authentication Use Cases -->
+        <useCaseGroup name="Authentication" category="core">
+            <useCase id="UC_AUTH" name="User Authentication" type="abstract">
+                <description>Core authentication functionality required by most system operations</description>
+            </useCase>
+            <useCase id="UC_LOGIN" name="Login to System" type="concrete">
+                <description>User login functionality</description>
+            </useCase>
+            <useCase id="UC_LOGOUT" name="Logout from System" type="concrete">
+                <description>User logout functionality</description>
+            </useCase>
+            <useCase id="UC_PASSWORD_RESET" name="Reset Password" type="concrete">
+                <description>Password reset functionality</description>
+            </useCase>
+            <useCase id="UC_VERIFY_DOB" name="Verify Date of Birth" type="concrete">
+                <description>Date of birth verification for security</description>
+            </useCase>
+        </useCaseGroup>
+        
+        <!-- Patient/Student Use Cases -->
+        <useCaseGroup name="Patient/Student Operations" category="patient">
+            <useCase id="UC_BOOK_APPOINTMENTS" name="Book Appointments" type="concrete">
+                <description>Schedule medical appointments</description>
+            </useCase>
+            <useCase id="UC_CANCEL_APPOINTMENTS" name="Cancel Appointments" type="concrete">
+                <description>Cancel scheduled appointments</description>
+            </useCase>
+            <useCase id="UC_VIEW_MEDICAL_HISTORY" name="View Medical History" type="concrete">
+                <description>View patient medical history</description>
+            </useCase>
+            <useCase id="UC_VIEW_PRESCRIPTIONS" name="View Prescriptions" type="concrete">
+                <description>View prescription information</description>
+            </useCase>
+            <useCase id="UC_VIEW_PROFILE" name="View Profile" type="concrete">
+                <description>View user profile information</description>
+            </useCase>
+            <useCase id="UC_RECEIVE_NOTIFICATIONS" name="Receive Notifications" type="concrete">
+                <description>Receive system notifications</description>
+            </useCase>
+            <useCase id="UC_SEND_MESSAGES" name="Send Messages" type="concrete">
+                <description>Send messages to other users</description>
+            </useCase>
+        </useCaseGroup>
+        
+        <!-- Medical Staff Use Cases -->
+        <useCaseGroup name="Medical Staff Operations" category="medical">
+            <useCase id="UC_VIEW_APPOINTMENTS" name="View Appointments" type="concrete">
+                <description>View scheduled appointments</description>
+            </useCase>
+            <useCase id="UC_ISSUE_PRESCRIPTIONS" name="Issue Prescriptions" type="concrete">
+                <description>Issue medical prescriptions</description>
+            </useCase>
+            <useCase id="UC_ACCESS_PATIENT_PROFILES" name="Access Patient Profiles" type="concrete">
+                <description>Access patient profile information</description>
+            </useCase>
+            <useCase id="UC_RECORD_VITALS" name="Record Vital Signs" type="concrete">
+                <description>Record patient vital signs</description>
+            </useCase>
+            <useCase id="UC_MANAGE_REFERRALS" name="Manage Referrals" type="concrete">
+                <description>Manage patient referrals</description>
+            </useCase>
+            <useCase id="UC_UPDATE_PATIENT_INFO" name="Update Patient Info" type="concrete">
+                <description>Update patient information</description>
+            </useCase>
+            <useCase id="UC_SEND_PARENT_ALERTS" name="Send Parent Alerts" type="concrete">
+                <description>Send alerts to parents/guardians</description>
+            </useCase>
+            <useCase id="UC_MANAGE_INVENTORY" name="Manage Inventory" type="concrete">
+                <description>Manage medical inventory</description>
+            </useCase>
+        </useCaseGroup>
+        
+        <!-- Administrative Use Cases -->
+        <useCaseGroup name="Administrative Operations" category="admin">
+            <useCase id="UC_MANAGE_USERS" name="Manage Users" type="concrete">
+                <description>Manage system users</description>
+            </useCase>
+            <useCase id="UC_MANAGE_PATIENTS" name="Manage Patient Records" type="concrete">
+                <description>Manage patient records</description>
+            </useCase>
+            <useCase id="UC_IMPORT_STUDENTS" name="Import Student Data" type="concrete">
+                <description>Import student data from external systems</description>
+            </useCase>
+            <useCase id="UC_REPORTS" name="Generate/View/Export Reports" type="concrete">
+                <description>Generate, view, and export system reports</description>
+            </useCase>
+            <useCase id="UC_SYSTEM_CONFIG" name="System Configuration" type="concrete">
+                <description>Configure system settings</description>
+            </useCase>
+            <useCase id="UC_VIEW_LOGS" name="View System Logs" type="concrete">
+                <description>View system activity logs</description>
+            </useCase>
+            <useCase id="UC_MANAGE_STAFF" name="Manage Staff Profiles" type="concrete">
+                <description>Manage staff member profiles</description>
+            </useCase>
+            <useCase id="UC_DATA_BACKUP" name="Data Backup" type="concrete">
+                <description>Perform system data backup</description>
+            </useCase>
+            <useCase id="UC_EMAIL_NOTIFICATIONS" name="Send Email Notifications" type="concrete">
+                <description>Send email notifications to users</description>
+            </useCase>
+        </useCaseGroup>
+        
+    </systemBoundary>
+    
+    <!-- Actor-Use Case Relationships -->
+    <relationships>
+        <!-- Student Interactions -->
+        <relationship type="association" actor="Student" useCase="UC_LOGIN"/>
+        <relationship type="association" actor="Student" useCase="UC_LOGOUT"/>
+        <relationship type="association" actor="Student" useCase="UC_BOOK_APPOINTMENTS"/>
+        <relationship type="association" actor="Student" useCase="UC_CANCEL_APPOINTMENTS"/>
+        <relationship type="association" actor="Student" useCase="UC_VIEW_MEDICAL_HISTORY"/>
+        <relationship type="association" actor="Student" useCase="UC_VIEW_PRESCRIPTIONS"/>
+        <relationship type="association" actor="Student" useCase="UC_VIEW_PROFILE"/>
+        <relationship type="association" actor="Student" useCase="UC_RECEIVE_NOTIFICATIONS"/>
+        <relationship type="association" actor="Student" useCase="UC_SEND_MESSAGES"/>
+        
+        <!-- Faculty Interactions -->
+        <relationship type="association" actor="Faculty" useCase="UC_LOGIN"/>
+        <relationship type="association" actor="Faculty" useCase="UC_LOGOUT"/>
+        <relationship type="association" actor="Faculty" useCase="UC_ACCESS_PATIENT_PROFILES"/>
+        <relationship type="association" actor="Faculty" useCase="UC_VIEW_MEDICAL_HISTORY"/>
+        <relationship type="association" actor="Faculty" useCase="UC_BOOK_APPOINTMENTS"/>
+        <relationship type="association" actor="Faculty" useCase="UC_RECEIVE_NOTIFICATIONS"/>
+        <relationship type="association" actor="Faculty" useCase="UC_SEND_MESSAGES"/>
+        <relationship type="association" actor="Faculty" useCase="UC_VIEW_PROFILE"/>
+        
+        <!-- Staff Interactions -->
+        <relationship type="association" actor="Staff" useCase="UC_LOGIN"/>
+        <relationship type="association" actor="Staff" useCase="UC_LOGOUT"/>
+        <relationship type="association" actor="Staff" useCase="UC_VIEW_APPOINTMENTS"/>
+        <relationship type="association" actor="Staff" useCase="UC_MANAGE_PATIENTS"/>
+        <relationship type="association" actor="Staff" useCase="UC_ISSUE_PRESCRIPTIONS"/>
+        <relationship type="association" actor="Staff" useCase="UC_MANAGE_INVENTORY"/>
+        <relationship type="association" actor="Staff" useCase="UC_RECORD_VITALS"/>
+        <relationship type="association" actor="Staff" useCase="UC_MANAGE_REFERRALS"/>
+        <relationship type="association" actor="Staff" useCase="UC_SEND_PARENT_ALERTS"/>
+        <relationship type="association" actor="Staff" useCase="UC_UPDATE_PATIENT_INFO"/>
+        <relationship type="association" actor="Staff" useCase="UC_SEND_MESSAGES"/>
+        
+        <!-- Admin Interactions -->
+        <relationship type="association" actor="Admin" useCase="UC_LOGIN"/>
+        <relationship type="association" actor="Admin" useCase="UC_LOGOUT"/>
+        <relationship type="association" actor="Admin" useCase="UC_MANAGE_USERS"/>
+        <relationship type="association" actor="Admin" useCase="UC_MANAGE_PATIENTS"/>
+        <relationship type="association" actor="Admin" useCase="UC_IMPORT_STUDENTS"/>
+        <relationship type="association" actor="Admin" useCase="UC_REPORTS"/>
+        <relationship type="association" actor="Admin" useCase="UC_SYSTEM_CONFIG"/>
+        <relationship type="association" actor="Admin" useCase="UC_VIEW_LOGS"/>
+        <relationship type="association" actor="Admin" useCase="UC_MANAGE_STAFF"/>
+        <relationship type="association" actor="Admin" useCase="UC_DATA_BACKUP"/>
+    </relationships>
+    
+    <!-- Use Case Relationships -->
+    <useCaseRelationships>
+        <!-- Include Relationships -->
+        <relationship type="include" from="UC_LOGIN" to="UC_AUTH">
+            <description>Login requires authentication</description>
+        </relationship>
+        <relationship type="include" from="UC_LOGOUT" to="UC_AUTH">
+            <description>Logout requires authentication</description>
+        </relationship>
+        <relationship type="include" from="UC_BOOK_APPOINTMENTS" to="UC_AUTH">
+            <description>Booking appointments requires authentication</description>
+        </relationship>
+        <relationship type="include" from="UC_VIEW_APPOINTMENTS" to="UC_AUTH">
+            <description>Viewing appointments requires authentication</description>
+        </relationship>
+        <relationship type="include" from="UC_MANAGE_USERS" to="UC_AUTH">
+            <description>Managing users requires authentication</description>
+        </relationship>
+        
+        <!-- Extend Relationships -->
+        <relationship type="extend" from="UC_VERIFY_DOB" to="UC_LOGIN">
+            <description>Date of birth verification extends login process</description>
+        </relationship>
+        <relationship type="extend" from="UC_PASSWORD_RESET" to="UC_LOGIN">
+            <description>Password reset extends login process</description>
+        </relationship>
+        <relationship type="extend" from="UC_SEND_PARENT_ALERTS" to="UC_EMAIL_NOTIFICATIONS">
+            <description>Parent alerts extend email notifications</description>
+        </relationship>
+        <relationship type="extend" from="UC_RECEIVE_NOTIFICATIONS" to="UC_EMAIL_NOTIFICATIONS">
+            <description>Receiving notifications extends email notifications</description>
+        </relationship>
+    </useCaseRelationships>
+    
+    <!-- Layout Information -->
+    <layout>
+        <actorPosition actor="Student" x="100" y="200" side="left"/>
+        <actorPosition actor="Faculty" x="100" y="300" side="left"/>
+        <actorPosition actor="Staff" x="800" y="200" side="right"/>
+        <actorPosition actor="Admin" x="800" y="300" side="right"/>
+        <systemBoundary x="300" y="100" width="400" height="500"/>
+    </layout>
+    
+    <!-- Additional Information -->
+    <notes>
+        <note>This Use Case Diagram represents a comprehensive clinic management system with four distinct actor types and multiple use cases organized by functional areas.</note>
+        <note>The system supports authentication, patient management, medical staff operations, and administrative functions.</note>
+        <note>All use cases require proper authentication and authorization based on user roles.</note>
+    </notes>
+    
+</useCaseDiagram>
