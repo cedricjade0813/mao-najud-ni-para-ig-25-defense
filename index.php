@@ -34,9 +34,7 @@ Message: " . htmlspecialchars($message) . "
 Please respond to this inquiry as soon as possible.
 
 Best regards,
-Clinic Management System
-
-Time: " . date('F j, Y \a\t g:i A') . "";
+Clinic Management System";
         
         $mail->send();
         return true;
@@ -74,9 +72,7 @@ Message: " . htmlspecialchars($contact_message_text) . "
 Please respond to this inquiry as soon as possible.
 
 Best regards,
-Clinic Management System
-
-Time: " . date('F j, Y \a\t g:i A') . "";
+Clinic Management System";
         
         // Try multiple email methods
         $email_sent = false;
@@ -1134,7 +1130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               </div>
             <?php endif; ?>
             
-             <form method="POST" action="" class="space-y-4 md:space-y-6" id="contactForm">
+             <form method="POST" action="#contact" class="space-y-4 md:space-y-6" id="contactForm">
                <div>
                  <label class="block text-white font-medium mb-2 mobile-tiny-contact-form">Name</label>
                  <input type="text" name="contact_name" class="modern-input w-full mobile-tiny-contact-form" placeholder="Your name" value="<?php echo htmlspecialchars($contact_name ?? ''); ?>" required>
@@ -1571,6 +1567,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <?php endif; ?>
     });
   </script>
+  
+  <!-- Contact Form Scroll Position Script -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Check if there's a contact form submission and maintain scroll position
+      <?php if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['contact_submit'])): ?>
+        // Scroll to contact section after form submission
+        setTimeout(function() {
+          const contactSection = document.getElementById('contact');
+          if (contactSection) {
+            contactSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 100);
+      <?php endif; ?>
+      
+      // Handle form submission to maintain scroll position
+      const contactForm = document.getElementById('contactForm');
+      if (contactForm) {
+        contactForm.addEventListener('submit', function() {
+          // Store current scroll position
+          const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+          sessionStorage.setItem('contactFormScrollPosition', scrollPosition);
+        });
+      }
+      
+      // Restore scroll position after page load if it was set
+      const savedScrollPosition = sessionStorage.getItem('contactFormScrollPosition');
+      if (savedScrollPosition) {
+        setTimeout(function() {
+          window.scrollTo(0, parseInt(savedScrollPosition));
+          sessionStorage.removeItem('contactFormScrollPosition');
+        }, 100);
+      }
+    });
+  </script>
+  
   <!-- Render DOB form if needed -->
   <?php if (isset($_GET['dobstep']) && isset($_SESSION['pending_patient_id'])): ?>
     <div class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
