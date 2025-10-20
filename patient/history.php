@@ -281,6 +281,33 @@ html::-webkit-scrollbar-corner, body::-webkit-scrollbar-corner {
     background: #e5e7eb;
 }
 
+/* Year filter dropdown styling */
+#yearFilter {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    padding: 10px 16px 10px 16px;
+    font-size: 14px;
+    color: #374151;
+    width: 128px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+}
+
+#yearFilter:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+#yearFilter option {
+    padding: 8px 12px;
+    background: white;
+    color: #374151;
+}
+
 /* Mobile responsive styles for medical history */
 @media (max-width: 400px) {
     /* Medical History title and subtitle - matching profile page styling */
@@ -398,10 +425,18 @@ $medicalHistory_paginated = array_slice($medicalHistory, $med_offset, $med_recor
     <div class="bg-white rounded-lg shadow-sm border border-gray-200">
         <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
             <h3 class="text-lg font-semibold text-gray-900">History</h3>
-            <div class="relative">
-                <input id="medicalHistorySearch" type="text" placeholder="Search medical records..." 
-                       class="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white h-10">
-                <i class="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+            <div class="flex items-center gap-3">
+                <div class="relative">
+                    <input id="medicalHistorySearch" type="text" placeholder="Search medical records..." 
+                           class="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white h-10">
+                    <i class="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                </div>
+                <div class="relative">
+                    <select id="yearFilter" class="w-32 pl-3 pr-8 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white h-10 appearance-none cursor-pointer">
+                        <option value="">All Years</option>
+                    </select>
+                    <i class="ri-arrow-down-s-line absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                </div>
             </div>
         </div>
         <div class="overflow-x-auto scrollbar-hide">
@@ -579,20 +614,112 @@ $medicalHistory_paginated = array_slice($medicalHistory, $med_offset, $med_recor
 document.addEventListener('DOMContentLoaded', function() {
     // Medical history search functionality
     const medicalHistorySearchInput = document.getElementById('medicalHistorySearch');
+    const yearFilter = document.getElementById('yearFilter');
     let currentMedicalHistorySearchTerm = null;
     let currentMedicalHistoryPage = 1;
+    let currentYearFilter = null;
     
     if (medicalHistorySearchInput) {
         medicalHistorySearchInput.addEventListener('input', function() {
             const searchTerm = this.value.trim();
+            currentMedicalHistorySearchTerm = searchTerm;
             currentMedicalHistoryPage = 1; // Reset to first page when searching
-            searchMedicalHistory(searchTerm, 1);
+            filterMedicalHistoryTable();
+        });
+    }
+    
+    // Populate year dropdown with available years from medical history
+    function populateYearDropdown() {
+        const medicalHistoryData = <?php echo json_encode($medicalHistory); ?>;
+        const years = new Set();
+        
+        medicalHistoryData.forEach(record => {
+            const date = new Date(record.prescription_data.prescription_date);
+            if (!isNaN(date.getTime())) {
+                years.add(date.getFullYear());
+            }
+        });
+        
+        // Get current year
+        const currentYear = new Date().getFullYear();
+        
+        // Generate years from 2020 to current year
+        const allYears = [];
+        for (let year = currentYear; year >= 2020; year--) {
+            allYears.push(year);
+        }
+        
+        // Clear existing options except "All Years"
+        yearFilter.innerHTML = '<option value="">All Years</option>';
+        
+        // Add year options
+        allYears.forEach(year => {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = year;
+            yearFilter.appendChild(option);
+        });
+    }
+    
+    // Initialize year dropdown
+    populateYearDropdown();
+    
+    // Year filter event listener
+    if (yearFilter) {
+        yearFilter.addEventListener('change', function() {
+            const selectedYear = this.value;
+            currentYearFilter = selectedYear;
+            currentMedicalHistoryPage = 1; // Reset to first page when filtering
+            filterMedicalHistoryTable();
+        });
+    }
+    
+    // Client-side filtering function
+    function filterMedicalHistoryTable() {
+        const medicalHistoryData = <?php echo json_encode($medicalHistory); ?>;
+        let filteredData = [...medicalHistoryData];
+        
+        // Apply year filter
+        if (currentYearFilter) {
+            filteredData = filteredData.filter(record => {
+                const date = new Date(record.prescription_data.prescription_date);
+                return date.getFullYear() == currentYearFilter;
+            });
+        }
+        
+        // Apply search filter
+        if (currentMedicalHistorySearchTerm && currentMedicalHistorySearchTerm.trim() !== '') {
+            const searchTerm = currentMedicalHistorySearchTerm.toLowerCase();
+            filteredData = filteredData.filter(record => {
+                return (
+                    record.reason.toLowerCase().includes(searchTerm) ||
+                    record.medicine.toLowerCase().includes(searchTerm) ||
+                    record.prescribed_by.toLowerCase().includes(searchTerm) ||
+                    record.date.toLowerCase().includes(searchTerm) ||
+                    record.time.toLowerCase().includes(searchTerm)
+                );
+            });
+        }
+        
+        // Update pagination
+        const totalRecords = filteredData.length;
+        const totalPages = Math.ceil(totalRecords / 10);
+        const startIndex = (currentMedicalHistoryPage - 1) * 10;
+        const endIndex = startIndex + 10;
+        const paginatedData = filteredData.slice(startIndex, endIndex);
+        
+        // Update table
+        updateMedicalHistoryTable(paginatedData, {
+            current_page: currentMedicalHistoryPage,
+            total_pages: totalPages,
+            total_records: totalRecords,
+            per_page: 10
         });
     }
     
     function searchMedicalHistory(searchTerm, page = 1) {
-        // If search is cleared, show all data without page reload
-        if (!searchTerm || searchTerm.trim() === '') {
+        // If search is cleared and no year filter, show all data without page reload
+        if ((!searchTerm || searchTerm.trim() === '') && !currentYearFilter) {
             currentMedicalHistorySearchTerm = null;
             // Make AJAX request to get all data without search filter
             fetch('search_medical_history.php', {
@@ -600,7 +727,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `search=&page=${page}&student_id=<?php echo $student_id; ?>`
+                body: `search=&page=${page}&student_id=<?php echo $student_id; ?>&year=${currentYearFilter || ''}`
             })
             .then(response => {
                 if (!response.ok) {
@@ -621,13 +748,13 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Make AJAX request to server
+        // Make AJAX request to server with both search term and year filter
         fetch('search_medical_history.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: `search=${encodeURIComponent(searchTerm)}&page=${page}&student_id=<?php echo $student_id; ?>`
+            body: `search=${encodeURIComponent(searchTerm || '')}&page=${page}&student_id=<?php echo $student_id; ?>&year=${currentYearFilter || ''}`
         })
         .then(response => {
             if (!response.ok) {
@@ -731,11 +858,14 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Previous button - always show
         if (currentPage > 1) {
-            const prevBtn = document.createElement('a');
-            const searchParam = currentMedicalHistorySearchTerm ? `&search=${encodeURIComponent(currentMedicalHistorySearchTerm)}` : '';
-            prevBtn.href = `?med_page=${currentPage - 1}${searchParam}`;
+            const prevBtn = document.createElement('button');
+            prevBtn.type = 'button';
             prevBtn.className = 'min-h-9.5 min-w-9.5 py-2 px-2.5 inline-flex justify-center items-center gap-x-1.5 text-sm rounded-l-lg border border-gray-200 text-gray-800 hover:bg-gray-100 focus:outline-hidden focus:bg-gray-100';
             prevBtn.setAttribute('aria-label', 'Previous');
+            prevBtn.onclick = () => {
+                currentMedicalHistoryPage = currentPage - 1;
+                filterMedicalHistoryTable();
+            };
             prevBtn.innerHTML = `
                 <svg class="shrink-0 size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="m15 18-6-6 6-6"></path>
@@ -764,11 +894,14 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Always show page 1 if it's not in the current range
         if (startPage > 1) {
-            const firstPage = document.createElement('a');
-            const searchParam = currentMedicalHistorySearchTerm ? `&search=${encodeURIComponent(currentMedicalHistorySearchTerm)}` : '';
-            firstPage.href = `?med_page=1${searchParam}`;
+            const firstPage = document.createElement('button');
+            firstPage.type = 'button';
             firstPage.className = 'min-h-9.5 min-w-9.5 flex justify-center items-center border border-gray-200 text-gray-800 hover:bg-gray-100 py-2 px-3 text-sm focus:outline-hidden focus:bg-gray-100';
             firstPage.textContent = '1';
+            firstPage.onclick = () => {
+                currentMedicalHistoryPage = 1;
+                filterMedicalHistoryTable();
+            };
             paginationNav.appendChild(firstPage);
             
             if (startPage > 2) {
@@ -789,11 +922,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 currentBtn.textContent = i;
                 paginationNav.appendChild(currentBtn);
             } else {
-                const pageLink = document.createElement('a');
-                const searchParam = currentMedicalHistorySearchTerm ? `&search=${encodeURIComponent(currentMedicalHistorySearchTerm)}` : '';
-                pageLink.href = `?med_page=${i}${searchParam}`;
+                const pageLink = document.createElement('button');
+                pageLink.type = 'button';
                 pageLink.className = 'min-h-9.5 min-w-9.5 flex justify-center items-center border border-gray-200 text-gray-800 hover:bg-gray-100 py-2 px-3 text-sm focus:outline-hidden focus:bg-gray-100';
                 pageLink.textContent = i;
+                pageLink.onclick = () => {
+                    currentMedicalHistoryPage = i;
+                    filterMedicalHistoryTable();
+                };
                 paginationNav.appendChild(pageLink);
             }
         }
@@ -807,21 +943,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 paginationNav.appendChild(ellipsis);
             }
             
-            const lastPage = document.createElement('a');
-            const searchParam = currentMedicalHistorySearchTerm ? `&search=${encodeURIComponent(currentMedicalHistorySearchTerm)}` : '';
-            lastPage.href = `?med_page=${totalPages}${searchParam}`;
+            const lastPage = document.createElement('button');
+            lastPage.type = 'button';
             lastPage.className = 'min-h-9.5 min-w-9.5 flex justify-center items-center border border-gray-200 text-gray-800 hover:bg-gray-100 py-2 px-3 text-sm focus:outline-hidden focus:bg-gray-100';
             lastPage.textContent = totalPages;
+            lastPage.onclick = () => {
+                currentMedicalHistoryPage = totalPages;
+                filterMedicalHistoryTable();
+            };
             paginationNav.appendChild(lastPage);
         }
         
         // Next button - always show
         if (currentPage < totalPages) {
-            const nextBtn = document.createElement('a');
-            const searchParam = currentMedicalHistorySearchTerm ? `&search=${encodeURIComponent(currentMedicalHistorySearchTerm)}` : '';
-            nextBtn.href = `?med_page=${currentPage + 1}${searchParam}`;
+            const nextBtn = document.createElement('button');
+            nextBtn.type = 'button';
             nextBtn.className = 'min-h-9.5 min-w-9.5 py-2 px-2.5 inline-flex justify-center items-center gap-x-1.5 text-sm rounded-r-lg border border-gray-200 text-gray-800 hover:bg-gray-100 focus:outline-hidden focus:bg-gray-100';
             nextBtn.setAttribute('aria-label', 'Next');
+            nextBtn.onclick = () => {
+                currentMedicalHistoryPage = currentPage + 1;
+                filterMedicalHistoryTable();
+            };
             nextBtn.innerHTML = `
                 <span class="sr-only">Next</span>
                 <svg class="shrink-0 size-3.5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -845,23 +987,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Handle pagination clicks
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('.flex.justify-between.items-center.mt-6.px-6.py-4.border-t.border-gray-200.bg-gray-50 nav[aria-label="Pagination"] a')) {
-            const link = e.target.closest('a');
-            const href = link.getAttribute('href');
-            
-            if (href.includes('med_page=')) {
-                e.preventDefault();
-                const pageMatch = href.match(/med_page=(\d+)/);
-                if (pageMatch) {
-                    const page = parseInt(pageMatch[1]);
-                    const searchTerm = currentMedicalHistorySearchTerm || '';
-                    searchMedicalHistory(searchTerm, page);
-                }
-            }
-        }
-    });
+    // Pagination is now handled by button onclick events
 });
 
 function viewPrescriptionDetails(prescription) {
