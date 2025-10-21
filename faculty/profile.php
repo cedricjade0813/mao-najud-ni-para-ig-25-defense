@@ -139,6 +139,9 @@ $appointment_counts = ['total' => 0, 'pending' => 0, 'confirmed' => 0, 'cancelle
 $upcoming_appointments = [];
 
 try {
+    // Set timezone to Philippines for consistent date handling
+    date_default_timezone_set('Asia/Manila');
+    
     // Calculate date range for last 10 days
     $ten_days_ago = date('Y-m-d', strtotime('-10 days'));
     $today = date('Y-m-d');

@@ -67,14 +67,35 @@ try {
             $statusCondition = "status = 'pending'";
     }
     
-    // Get current date
+    // Set timezone to Philippines and get current date
+    date_default_timezone_set('Asia/Manila');
     $currentDate = date('Y-m-d');
+    
+    // Build date condition - filter by current date for pending, by time for rescheduled
+    if ($status === 'pending') {
+        $dateCondition = "AND a.date = ?";
+        $dateParams = [$currentDate];
+    } elseif ($status === 'rescheduled') {
+        $currentTime = date('H:i:s');
+        // Hide rescheduled appointments 1 hour after their scheduled time
+        $dateCondition = "AND (a.date > ? OR (a.date = ? AND (
+            (a.time NOT LIKE '%-%' AND ADDTIME(a.time, '01:00:00') >= ?) OR 
+            (a.time LIKE '%-%' AND (
+                ADDTIME(SUBSTRING_INDEX(a.time, '-', 1), '01:00:00') >= ? OR 
+                (SUBSTRING_INDEX(a.time, '-', 1) <= ? AND ADDTIME(SUBSTRING_INDEX(a.time, '-', -1), '01:00:00') >= ?)
+            ))
+        )))";
+        $dateParams = [$currentDate, $currentDate, $currentTime, $currentTime, $currentTime, $currentTime];
+    } else {
+        $dateCondition = "";
+        $dateParams = [];
+    }
     
     // Build the query for counting total records
     $countSql = "SELECT COUNT(*) as total FROM appointments a 
                  LEFT JOIN doctor_schedules ds ON a.doctor_id = ds.id 
-                 WHERE a.faculty_id = ? AND $statusCondition AND a.date = ?";
-    $countParams = [$faculty_id, $currentDate];
+                 WHERE a.faculty_id = ? AND $statusCondition $dateCondition";
+    $countParams = array_merge([$faculty_id], $dateParams);
     
     // Add search condition if search term is provided
     if (!empty($searchTerm)) {
@@ -94,9 +115,9 @@ try {
     $sql = "SELECT a.id, a.date, a.time, a.reason, a.status, a.faculty_id, a.doctor_id, ds.doctor_name 
             FROM appointments a
             LEFT JOIN doctor_schedules ds ON a.doctor_id = ds.id
-            WHERE a.faculty_id = ? AND $statusCondition AND a.date = ?";
+            WHERE a.faculty_id = ? AND $statusCondition $dateCondition";
     
-    $params = [$faculty_id, $currentDate];
+    $params = array_merge([$faculty_id], $dateParams);
     
     // Add search condition if search term is provided
     if (!empty($searchTerm)) {
@@ -113,49 +134,20 @@ try {
     $stmt->execute($params);
     $appointments = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Debug: Log the actual appointment data with doctor names
-    error_log("=== DEBUGGING FACULTY APPOINTMENT DOCTOR NAMES ===");
-    error_log("Faculty ID: " . $faculty_id . ", Status: " . $status);
-    error_log("SQL Query: " . $sql);
-    error_log("Found appointments: " . count($appointments));
-    error_log("Raw appointment data: " . json_encode($appointments));
-    
-    // Debug: Check what's in doctor_schedules table
-    $debug_doctor_sql = "SELECT * FROM doctor_schedules ORDER BY schedule_date DESC LIMIT 10";
-    $debug_doctor_stmt = $db->prepare($debug_doctor_sql);
-    $debug_doctor_stmt->execute();
-    $debug_doctors = $debug_doctor_stmt->fetchAll(PDO::FETCH_ASSOC);
-    error_log("All doctor schedules: " . json_encode($debug_doctors));
-    
-    // Debug: Check appointments table structure and data
-    $debug_appt_sql = "SELECT * FROM appointments WHERE faculty_id = ? ORDER BY date DESC LIMIT 3";
-    $debug_appt_stmt = $db->prepare($debug_appt_sql);
-    $debug_appt_stmt->execute([$faculty_id]);
-    $debug_appointments = $debug_appt_stmt->fetchAll(PDO::FETCH_ASSOC);
-    error_log("Faculty appointments: " . json_encode($debug_appointments));
-    
-    // Debug: Test the join manually
-    if (!empty($debug_appointments)) {
-        $test_date = $debug_appointments[0]['date'];
-        $test_join_sql = "SELECT a.date, ds.doctor_name FROM appointments a LEFT JOIN doctor_schedules ds ON a.date = ds.schedule_date WHERE a.date = ? LIMIT 1";
-        $test_join_stmt = $db->prepare($test_join_sql);
-        $test_join_stmt->execute([$test_date]);
-        $test_result = $test_join_stmt->fetch(PDO::FETCH_ASSOC);
-        error_log("Test join for date $test_date: " . json_encode($test_result));
-    }
+    // Debug logging removed for cleaner code
     
     // Format appointments
     $formattedAppointments = [];
     foreach ($appointments as $appt) {
         // Get doctor name using doctor_id
-        $doctorName = 'Dr. Medical Officer'; // Default
+        $doctorName = 'Dr. Medical Officer'; // Default fallback
         
-        // Try to get doctor name from the join result first
+        // First try to get doctor name from the join result
         if (!empty($appt['doctor_name'])) {
             $doctorName = $appt['doctor_name'];
-            error_log("Found doctor via join: " . $doctorName);
-        } else if (!empty($appt['doctor_id'])) {
-            // If join didn't work but we have doctor_id, try direct query
+        } 
+        // If join didn't work, try direct query using doctor_id
+        else if (!empty($appt['doctor_id'])) {
             $doctor_query = "SELECT doctor_name FROM doctor_schedules WHERE id = ?";
             $doctor_stmt = $db->prepare($doctor_query);
             $doctor_stmt->execute([$appt['doctor_id']]);
@@ -163,18 +155,13 @@ try {
             
             if ($doctor_result && !empty($doctor_result['doctor_name'])) {
                 $doctorName = $doctor_result['doctor_name'];
-                error_log("Found doctor via doctor_id {$appt['doctor_id']}: " . $doctorName);
-            } else {
-                error_log("No doctor found for doctor_id: " . $appt['doctor_id']);
             }
-        } else {
-            error_log("No doctor_id found for appointment: " . $appt['id']);
         }
         
         // Add "Dr." prefix if not already present
-        if ($doctorName !== 'Dr. Medical Officer' && !empty($doctorName)) {
+        if (!empty($doctorName) && $doctorName !== 'Dr. Medical Officer') {
             if (!str_starts_with($doctorName, 'Dr.')) {
-                $doctorName = 'Dr. ' . ucfirst($doctorName);
+                $doctorName = 'Dr. ' . $doctorName;
             }
         }
         
@@ -187,7 +174,6 @@ try {
             'doctor_name' => $doctorName,
             'formatted_date' => date('D, M j, Y', strtotime($appt['date'])),
             'faculty_id' => $appt['faculty_id'] ?? 'N/A',
-            'doctor_id' => $appt['doctor_id'] ?? 'N/A' // Add doctor_id for debugging
         ];
     }
     
@@ -201,12 +187,6 @@ try {
             'total_records' => $totalRecords,
             'per_page' => $perPage
         ],
-        'debug_info' => [
-            'faculty_id' => $faculty_id,
-            'status_filter' => $status,
-            'search_term' => $searchTerm,
-            'total_found' => count($appointments)
-        ]
     ]);
     
 } catch (PDOException $e) {

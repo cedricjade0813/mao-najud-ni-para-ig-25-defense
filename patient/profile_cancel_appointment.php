@@ -24,13 +24,13 @@ try {
     $success = false;
     
     if ($appointment_id) {
-        // New method: Cancel by appointment ID (works for any status)
-        $stmt = $db->prepare('UPDATE appointments SET status = "cancelled" WHERE id = ? AND student_id = ? AND status IN ("pending", "approved") LIMIT 1');
+        // New method: Delete appointment by ID (works for any status)
+        $stmt = $db->prepare('DELETE FROM appointments WHERE id = ? AND student_id = ? AND status IN ("pending", "approved") LIMIT 1');
         $stmt->execute([$appointment_id, $student_id]);
         $success = $stmt->rowCount() > 0;
     } elseif ($date && $time && $reason) {
-        // Old method: Cancel by date/time/reason (only for pending appointments)
-        $stmt = $db->prepare('UPDATE appointments SET status = "cancelled" WHERE student_id = ? AND date = ? AND time = ? AND reason = ? AND status = "pending" LIMIT 1');
+        // Old method: Delete appointment by date/time/reason (only for pending appointments)
+        $stmt = $db->prepare('DELETE FROM appointments WHERE student_id = ? AND date = ? AND time = ? AND reason = ? AND status = "pending" LIMIT 1');
         $stmt->execute([$student_id, $date, $time, $reason]);
         $success = $stmt->rowCount() > 0;
     } else {

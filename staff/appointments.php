@@ -34,6 +34,9 @@ if (
         echo json_encode(['success' => false, 'error' => 'Database connection failed']);
         exit;
     }
+    
+    // Set timezone to Philippines for consistent date handling
+    $conn->query("SET time_zone = '+08:00'");
 
 
 
@@ -556,6 +559,9 @@ if ($conn->connect_errno) {
 
 }
 
+// Set timezone to Philippines for consistent date handling
+$conn->query("SET time_zone = '+08:00'");
+
 
 
 // Create doctor_schedules table if not exists
@@ -582,17 +588,7 @@ $appointments = [];
 
 
 
-// Add doctor_name column to appointments table if it doesn't exist
-
-try {
-
-    $conn->query("ALTER TABLE appointments ADD COLUMN doctor_name VARCHAR(255) DEFAULT 'Dr. Sarah Johnson'");
-
-} catch (mysqli_sql_exception $e) {
-
-    // Column might already exist, ignore error
-
-}
+// Doctor name is now properly fetched from doctor_schedules table via JOIN
 
 
 
@@ -600,11 +596,13 @@ try {
 
 $sql = 'SELECT a.date, a.time, a.reason, a.status, a.email, ip.name, 
 
-        COALESCE(a.doctor_name, "Dr. Sarah Johnson") as doctor_name 
+        COALESCE(ds.doctor_name, "Dr. Sarah Johnson") as doctor_name 
 
         FROM appointments a 
 
         JOIN imported_patients ip ON a.student_id = ip.id 
+
+        LEFT JOIN doctor_schedules ds ON a.doctor_id = ds.id
 
         ORDER BY a.date DESC, a.time DESC';
 
@@ -750,7 +748,7 @@ $conn->close();
 
                         <label for="doctor_date" class="block text-sm font-medium text-gray-700 mb-2">Date</label>
 
-                        <input type="date" id="doctor_date" name="doctor_date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" min="<?php echo date('Y-m-d'); ?>" required>
+                        <input type="date" id="doctor_date" name="doctor_date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" min="<?php date_default_timezone_set('Asia/Manila'); echo date('Y-m-d'); ?>" required>
 
                 </div>
 
@@ -849,6 +847,9 @@ $conn->close();
                 die('Database connection failed: ' . $conn->connect_error);
 
             }
+            
+            // Set timezone to Philippines for consistent date handling
+            $conn->query("SET time_zone = '+08:00'");
 
             $ds_total_count_stmt = $conn->query("SELECT COUNT(*) FROM doctor_schedules WHERE schedule_date >= CURDATE()");
 
@@ -1282,7 +1283,12 @@ $conn->close();
             die('Database connection failed: ' . $conn->connect_error);
 
         }
+        
+        // Set timezone to Philippines for consistent date handling
+        $conn->query("SET time_zone = '+08:00'");
 
+        // Set timezone to Philippines and get current date
+        date_default_timezone_set('Asia/Manila');
         $currentDate = date('Y-m-d');
         $pending_total_count_stmt = $conn->query("SELECT COUNT(*) FROM (
             SELECT a.id FROM appointments a 
@@ -1705,17 +1711,20 @@ $conn->close();
             die('Database connection failed: ' . $conn->connect_error);
 
         }
+        
+        // Set timezone to Philippines for consistent date handling
+        $conn->query("SET time_zone = '+08:00'");
 
         // Query for approved appointments only (approved and confirmed)
 
         $done_total_count_stmt = $conn->query("SELECT COUNT(*) FROM (
             SELECT a.id FROM appointments a 
             JOIN imported_patients ip ON a.student_id = ip.id 
-            WHERE a.status IN ('approved', 'confirmed') AND a.date = '$currentDate'
+            WHERE a.status IN ('approved', 'confirmed')
             UNION ALL
             SELECT a.id FROM appointments a 
             JOIN faculty f ON a.faculty_id = f.faculty_id 
-            WHERE a.status IN ('approved', 'confirmed') AND a.date = '$currentDate'
+            WHERE a.status IN ('approved', 'confirmed')
         ) as combined_appointments");
 
         $done_total_records = $done_total_count_stmt->fetch_row()[0];
@@ -1728,10 +1737,10 @@ $conn->close();
                                     FROM appointments a 
                                     LEFT JOIN imported_patients ip ON a.student_id = ip.id 
                                     LEFT JOIN faculty f ON a.faculty_id = f.faculty_id 
-                                    WHERE a.status IN ('approved', 'confirmed') AND a.date = ? 
+                                    WHERE a.status IN ('approved', 'confirmed')
                                     ORDER BY a.date DESC, a.time DESC LIMIT ? OFFSET ?");
 
-        $done_stmt->bind_param('sii', $currentDate, $done_records_per_page, $done_offset);
+        $done_stmt->bind_param('ii', $done_records_per_page, $done_offset);
 
         $done_stmt->execute();
 
@@ -1752,11 +1761,11 @@ $conn->close();
         $declined_total_count_stmt = $conn->query("SELECT COUNT(*) FROM (
             SELECT a.id FROM appointments a 
             JOIN imported_patients ip ON a.student_id = ip.id 
-            WHERE a.status = 'declined' AND a.date = '$currentDate'
+            WHERE a.status = 'declined'
             UNION ALL
             SELECT a.id FROM appointments a 
             JOIN faculty f ON a.faculty_id = f.faculty_id 
-            WHERE a.status = 'declined' AND a.date = '$currentDate'
+            WHERE a.status = 'declined'
         ) as combined_appointments");
 
         $declined_total_records = $declined_total_count_stmt->fetch_row()[0];
@@ -1769,10 +1778,10 @@ $conn->close();
                                         FROM appointments a 
                                         LEFT JOIN imported_patients ip ON a.student_id = ip.id 
                                         LEFT JOIN faculty f ON a.faculty_id = f.faculty_id 
-                                        WHERE a.status = 'declined' AND a.date = ? 
+                                        WHERE a.status = 'declined'
                                         ORDER BY a.date DESC, a.time DESC LIMIT ? OFFSET ?");
 
-        $declined_stmt->bind_param('sii', $currentDate, $declined_records_per_page, $declined_offset);
+        $declined_stmt->bind_param('ii', $declined_records_per_page, $declined_offset);
 
         $declined_stmt->execute();
 
@@ -2165,15 +2174,31 @@ $conn->close();
             die('Database connection failed: ' . $conn->connect_error);
 
         }
+        
+        // Set timezone to Philippines for consistent date handling
+        $conn->query("SET time_zone = '+08:00'");
 
+        $currentTime = date('H:i:s');
         $resched_total_count_stmt = $conn->query("SELECT COUNT(*) FROM (
             SELECT a.id FROM appointments a 
             JOIN imported_patients ip ON a.student_id = ip.id 
-            WHERE a.status = 'rescheduled' AND a.date = '$currentDate'
+            WHERE a.status = 'rescheduled' AND (a.date > '$currentDate' OR (a.date = '$currentDate' AND (
+                (a.time NOT LIKE '%-%' AND ADDTIME(a.time, '01:00:00') >= '$currentTime') OR 
+                (a.time LIKE '%-%' AND (
+                    ADDTIME(SUBSTRING_INDEX(a.time, '-', 1), '01:00:00') >= '$currentTime' OR 
+                    (SUBSTRING_INDEX(a.time, '-', 1) <= '$currentTime' AND ADDTIME(SUBSTRING_INDEX(a.time, '-', -1), '01:00:00') >= '$currentTime')
+                ))
+            )))
             UNION ALL
             SELECT a.id FROM appointments a 
             JOIN faculty f ON a.faculty_id = f.faculty_id 
-            WHERE a.status = 'rescheduled' AND a.date = '$currentDate'
+            WHERE a.status = 'rescheduled' AND (a.date > '$currentDate' OR (a.date = '$currentDate' AND (
+                (a.time NOT LIKE '%-%' AND ADDTIME(a.time, '01:00:00') >= '$currentTime') OR 
+                (a.time LIKE '%-%' AND (
+                    ADDTIME(SUBSTRING_INDEX(a.time, '-', 1), '01:00:00') >= '$currentTime' OR 
+                    (SUBSTRING_INDEX(a.time, '-', 1) <= '$currentTime' AND ADDTIME(SUBSTRING_INDEX(a.time, '-', -1), '01:00:00') >= '$currentTime')
+                ))
+            )))
         ) as combined_appointments");
 
         $resched_total_records = $resched_total_count_stmt->fetch_row()[0];
@@ -2186,10 +2211,16 @@ $conn->close();
                                         FROM appointments a 
                                         LEFT JOIN imported_patients ip ON a.student_id = ip.id 
                                         LEFT JOIN faculty f ON a.faculty_id = f.faculty_id 
-                                        WHERE a.status = 'rescheduled' AND a.date = ? 
+                                        WHERE a.status = 'rescheduled' AND (a.date > ? OR (a.date = ? AND (
+                                            (a.time NOT LIKE '%-%' AND ADDTIME(a.time, '01:00:00') >= ?) OR 
+                                            (a.time LIKE '%-%' AND (
+                                                ADDTIME(SUBSTRING_INDEX(a.time, '-', 1), '01:00:00') >= ? OR 
+                                                (SUBSTRING_INDEX(a.time, '-', 1) <= ? AND ADDTIME(SUBSTRING_INDEX(a.time, '-', -1), '01:00:00') >= ?)
+                                            ))
+                                        )))
                                         ORDER BY a.date DESC, a.time DESC LIMIT ? OFFSET ?");
 
-        $resched_stmt->bind_param('sii', $currentDate, $resched_records_per_page, $resched_offset);
+        $resched_stmt->bind_param('ssssssii', $currentDate, $currentDate, $currentTime, $currentTime, $currentTime, $currentTime, $resched_records_per_page, $resched_offset);
 
         $resched_stmt->execute();
 

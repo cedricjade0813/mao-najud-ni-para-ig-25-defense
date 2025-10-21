@@ -51,12 +51,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['appointment_date'])) 
             if ($patient_existing) {
                 $booking_restriction = "You already have an appointment for this date. Only one appointment per schedule is allowed.";
             } else {
-            // Get doctor_id for this date
-            $doctor_stmt = $conn->prepare('SELECT id FROM doctor_schedules WHERE schedule_date = ? LIMIT 1');
-            $doctor_stmt->bind_param('s', $appointment_date);
+            // Set timezone to Philippines for consistent date handling
+            date_default_timezone_set('Asia/Manila');
+            
+            // Get doctor_id for this date and time
+            // First try exact time match
+            $doctor_stmt = $conn->prepare('SELECT id, doctor_name FROM doctor_schedules WHERE schedule_date = ? AND schedule_time = ? LIMIT 1');
+            $doctor_stmt->bind_param('ss', $appointment_date, $appointment_time);
             $doctor_stmt->execute();
             $doctor_result = $doctor_stmt->get_result()->fetch_assoc();
+            
+            // If no exact match, try to find a schedule that contains this time slot
+            if (!$doctor_result) {
+                $doctor_stmt = $conn->prepare('SELECT id, doctor_name FROM doctor_schedules WHERE schedule_date = ? LIMIT 1');
+                $doctor_stmt->bind_param('s', $appointment_date);
+                $doctor_stmt->execute();
+                $doctor_result = $doctor_stmt->get_result()->fetch_assoc();
+            }
+            
             $doctor_id = $doctor_result ? $doctor_result['id'] : null;
+            
 
             // Insert new appointment
             $insert_stmt = $conn->prepare('INSERT INTO appointments (student_id, date, time, reason, status, email, parent_email, doctor_id) VALUES (?, ?, ?, ?, "pending", ?, ?, ?)');
@@ -97,28 +111,38 @@ try {
     // Ignore errors for booked appointments
 }
 
-// Function to convert 24-hour time range to 12-hour format
+// Function to convert any time format to 12-hour format
+function convertTimeTo12Hour($timeString)
+{
+    if (empty($timeString)) {
+        return $timeString;
+    }
+
+    // If it's a time range (contains dash)
+    if (strpos($timeString, '-') !== false) {
+        $times = explode('-', $timeString);
+        if (count($times) === 2) {
+            $startTime = trim($times[0]);
+            $endTime = trim($times[1]);
+
+            // Convert start time
+            $startFormatted = date('g:i A', strtotime($startTime));
+
+            // Convert end time
+            $endFormatted = date('g:i A', strtotime($endTime));
+
+            return $startFormatted . '-' . $endFormatted;
+        }
+    }
+
+    // For single times, convert to 12-hour format
+    return date('g:i A', strtotime($timeString));
+}
+
+// Function to convert 24-hour time range to 12-hour format (legacy)
 function convertTimeRange($timeRange)
 {
-    if (empty($timeRange) || !strpos($timeRange, '-')) {
-        return $timeRange; // Return as is if not a time range
-    }
-
-    $times = explode('-', $timeRange);
-    if (count($times) !== 2) {
-        return $timeRange; // Return as is if not a valid range
-    }
-
-    $startTime = trim($times[0]);
-    $endTime = trim($times[1]);
-
-    // Convert start time
-    $startFormatted = date('g:i A', strtotime($startTime));
-
-    // Convert end time
-    $endFormatted = date('g:i A', strtotime($endTime));
-
-    return $startFormatted . '-' . $endFormatted;
+    return convertTimeTo12Hour($timeRange);
 }
 
 // Get appointment counts for each status
@@ -130,20 +154,34 @@ $counts = [
 ];
 
 try {
-    // Get current date
+    // Set timezone to Philippines and get current date
+    date_default_timezone_set('Asia/Manila');
     $currentDate = date('Y-m-d');
     
-    // Get counts for each status (only for current date)
+    // Get counts for each status (only pending filtered by current date, rescheduled filtered by time)
     $count_queries = [
         'pending' => "SELECT COUNT(*) FROM appointments WHERE student_id = ? AND status = 'pending' AND date = ?",
-        'approved' => "SELECT COUNT(*) FROM appointments WHERE student_id = ? AND status IN ('approved', 'confirmed') AND date = ?",
-        'declined' => "SELECT COUNT(*) FROM appointments WHERE student_id = ? AND status = 'declined' AND date = ?",
-        'rescheduled' => "SELECT COUNT(*) FROM appointments WHERE student_id = ? AND status = 'rescheduled' AND date = ?"
+        'approved' => "SELECT COUNT(*) FROM appointments WHERE student_id = ? AND status IN ('approved', 'confirmed')",
+        'declined' => "SELECT COUNT(*) FROM appointments WHERE student_id = ? AND status = 'declined'",
+        'rescheduled' => "SELECT COUNT(*) FROM appointments WHERE student_id = ? AND status = 'rescheduled' AND (date > ? OR (date = ? AND (
+            (time NOT LIKE '%-%' AND ADDTIME(time, '01:00:00') >= ?) OR 
+            (time LIKE '%-%' AND (
+                ADDTIME(SUBSTRING_INDEX(time, '-', 1), '01:00:00') >= ? OR 
+                (SUBSTRING_INDEX(time, '-', 1) <= ? AND ADDTIME(SUBSTRING_INDEX(time, '-', -1), '01:00:00') >= ?)
+            ))
+        )))"
     ];
 
     foreach ($count_queries as $status => $query) {
         $stmt = $conn->prepare($query);
-        $stmt->bind_param('is', $patient_id, $currentDate);
+        if ($status === 'pending') {
+            $stmt->bind_param('is', $patient_id, $currentDate);
+        } elseif ($status === 'rescheduled') {
+            $currentTime = date('H:i:s');
+            $stmt->bind_param('issssss', $patient_id, $currentDate, $currentDate, $currentTime, $currentTime, $currentTime, $currentTime);
+        } else {
+            $stmt->bind_param('i', $patient_id);
+        }
         $stmt->execute();
         $result = $stmt->get_result();
         $counts[$status] = $result->fetch_row()[0];
@@ -1010,8 +1048,8 @@ $conn->close();
         const row = document.createElement('tr');
         row.className = 'hover:bg-gray-50';
 
-        // Convert time range if needed
-        const timeDisplay = appt.time.includes('-') ? convertTimeRangeJS(appt.time) : appt.time;
+        // Convert time to 12-hour format
+        const timeDisplay = convertTimeTo12Hour(appt.time);
 
         // Status badge
         let statusBadge = '';
@@ -1051,37 +1089,51 @@ $conn->close();
         return row;
     }
 
-    // Function to convert 24-hour time range to 12-hour format in JavaScript
+    // Function to convert any time format to 12-hour format
+    function convertTimeTo12Hour(timeString) {
+        if (!timeString) {
+            return timeString;
+        }
+
+        // If it's a time range (contains dash)
+        if (timeString.includes('-')) {
+            const times = timeString.split('-');
+            if (times.length === 2) {
+                const startTime = times[0].trim();
+                const endTime = times[1].trim();
+
+                // Convert start time
+                const startDate = new Date('2000-01-01 ' + startTime);
+                const startFormatted = startDate.toLocaleTimeString([], {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                });
+
+                // Convert end time
+                const endDate = new Date('2000-01-01 ' + endTime);
+                const endFormatted = endDate.toLocaleTimeString([], {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                });
+
+                return startFormatted + '-' + endFormatted;
+            }
+        }
+
+        // For single times, convert to 12-hour format
+        const timeDate = new Date('2000-01-01 ' + timeString);
+        return timeDate.toLocaleTimeString([], {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+    }
+
+    // Function to convert 24-hour time range to 12-hour format in JavaScript (legacy)
     function convertTimeRangeJS(timeRange) {
-        if (!timeRange || !timeRange.includes('-')) {
-            return timeRange; // Return as is if not a time range
-        }
-
-        const times = timeRange.split('-');
-        if (times.length !== 2) {
-            return timeRange; // Return as is if not a valid range
-        }
-
-        const startTime = times[0].trim();
-        const endTime = times[1].trim();
-
-        // Convert start time
-        const startDate = new Date('2000-01-01 ' + startTime);
-        const startFormatted = startDate.toLocaleTimeString([], {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        });
-
-        // Convert end time
-        const endDate = new Date('2000-01-01 ' + endTime);
-        const endFormatted = endDate.toLocaleTimeString([], {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        });
-
-        return startFormatted + '-' + endFormatted;
+        return convertTimeTo12Hour(timeRange);
     }
 
     // Function to initialize the active tab
