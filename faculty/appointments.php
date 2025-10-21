@@ -42,6 +42,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['appointment_date'])) 
         if ($existing) {
             $booking_error = "This time slot is already booked. Please choose another time.";
         } else {
+            // Check if this faculty already has an appointment for this schedule
+            $faculty_check_stmt = $conn->prepare('SELECT id FROM appointments WHERE faculty_id = ? AND date = ? AND status != "declined"');
+            $faculty_check_stmt->bind_param('is', $faculty_id, $appointment_date);
+            $faculty_check_stmt->execute();
+            $faculty_existing = $faculty_check_stmt->get_result()->fetch_assoc();
+
+            if ($faculty_existing) {
+                $booking_restriction = "You already have an appointment for this date. Only one appointment per schedule is allowed.";
+            } else {
             // Get doctor_id for this date
             $doctor_stmt = $conn->prepare('SELECT id FROM doctor_schedules WHERE schedule_date = ? LIMIT 1');
             $doctor_stmt->bind_param('s', $appointment_date);
@@ -59,6 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['appointment_date'])) 
             } else {
                 $booking_error = "Failed to book appointment. Please try again.";
                 error_log("Failed to book appointment: " . $conn->error);
+            }
             }
         }
     }
@@ -412,6 +422,30 @@ $conn->close();
                     }, 300);
                 }
             }, 1200);
+        </script>
+    <?php endif; ?>
+
+    <?php if (isset($booking_restriction)): ?>
+        <div id="appointmentRestrictionToast" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9999; display: flex; align-items: center; justify-content: center; pointer-events: none; background: rgba(255,255,255,0.18);">
+            <div style="background:rgba(255,255,255,0.7); color:#dc2626; min-width:220px; max-width:90vw; padding:20px 36px; border-radius:16px; box-shadow:0 4px 32px rgba(220,38,38,0.10); font-size:1.1rem; font-weight:500; text-align:center; border:1.5px solid #dc2626; display:flex; align-items:center; gap:12px; pointer-events:auto;">
+                <span style="font-size:2rem;line-height:1;color:#dc2626;">🚫</span>
+                <span><?php echo htmlspecialchars($booking_restriction); ?></span>
+            </div>
+        </div>
+        <script>
+            // Auto-dismiss after 3 seconds with fade out
+            setTimeout(() => {
+                const notification = document.getElementById('appointmentRestrictionToast');
+                if (notification) {
+                    notification.style.transition = 'opacity 0.3s';
+                    notification.style.opacity = '0';
+                    setTimeout(() => {
+                        if (notification && notification.parentNode) {
+                            notification.parentNode.removeChild(notification);
+                        }
+                    }, 300);
+                }
+            }, 3000);
         </script>
     <?php endif; ?>
 

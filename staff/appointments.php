@@ -71,7 +71,15 @@ if (
 
         $doctor_time = $_POST['doctor_time'];
 
-
+        // Validate date - prevent yesterday's date
+        $selected_date = new DateTime($doctor_date);
+        $today = new DateTime();
+        $today->setTime(0, 0, 0); // Reset time to start of day
+        
+        if ($selected_date < $today) {
+            echo json_encode(['success' => false, 'error' => 'Cannot add doctor schedule for past dates. Please select today or a future date.']);
+            exit;
+        }
 
         if ($doctor_name && $profession && $doctor_date && $doctor_time) {
 
@@ -742,7 +750,7 @@ $conn->close();
 
                         <label for="doctor_date" class="block text-sm font-medium text-gray-700 mb-2">Date</label>
 
-                        <input type="date" id="doctor_date" name="doctor_date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" required>
+                        <input type="date" id="doctor_date" name="doctor_date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" min="<?php echo date('Y-m-d'); ?>" required>
 
                 </div>
 
@@ -3340,7 +3348,17 @@ $conn->close();
 
         const originalText = submitBtn.textContent;
 
-
+        // Validate date - prevent yesterday's date
+        const selectedDate = new Date(this.doctor_date.value);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Reset time to start of day
+        
+        if (selectedDate < today) {
+            alert('Cannot add doctor schedule for past dates. Please select today or a future date.');
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            return;
+        }
 
         // Disable button and show loading state
 
