@@ -2349,10 +2349,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 }, 3000);
                 
                 closeDeleteModal();
-                // Refresh the current view
-                const activeTab = document.querySelector('.patient-tab.active');
-                const currentType = activeTab ? activeTab.getAttribute('data-tab') : 'all';
-                filterPatientsByType(currentType);
+                // Auto-refresh the page after a short delay for immediate update
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
             } else {
                 alert('Error deleting patient: ' + (data.message || 'Unknown error'));
             }

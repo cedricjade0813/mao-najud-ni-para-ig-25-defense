@@ -761,8 +761,6 @@ $alerts_paginated = array_slice($alerts, $visits_offset, $visits_per_page);
                                 statusCell.innerHTML = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"><i class="ri-check-line mr-1"></i>Sent</span>';
                             }
 
-                            // Show success message
-                            showNotification('Alert sent successfully!', 'success');
                         } else {
                             // Re-enable button on error
                             this.disabled = false;
@@ -805,7 +803,6 @@ $alerts_paginated = array_slice($alerts, $visits_offset, $visits_per_page);
                     if (statusCell) {
                         statusCell.innerHTML = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"><i class="ri-check-line mr-1"></i>Sent</span>';
                     }
-                    showNotification('Alert sent successfully!', 'success');
                 } else {
                     button.disabled = false;
                     button.innerHTML = '<i class="ri-mail-send-line mr-1"></i>Send Alert';

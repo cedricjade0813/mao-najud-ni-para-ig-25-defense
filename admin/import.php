@@ -263,6 +263,7 @@ $db->exec('CREATE TABLE IF NOT EXISTS imported_patients (
 $uploadStatus = '';
 $previewRows = [];
 $duplicateCount = 0;
+$duplicateDetails = []; // Store specific duplicate data
 $importType = 'students'; // Default to students
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csvFile'])) {
@@ -321,6 +322,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csvFile'])) {
                 if ($stmtCheck->fetchColumn() > 0) {
                     $isDuplicate = true;
                     error_log("Faculty CSV Import: Duplicate found for email: $email");
+                    
+                    // Store duplicate details
+                    $duplicateDetails[] = [
+                        'type' => 'faculty',
+                        'identifier' => $email,
+                        'name' => $full_name,
+                        'email' => $email,
+                        'reason' => 'Email already exists'
+                    ];
                 }
                 
                 if (!$isDuplicate) {
@@ -397,15 +407,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csvFile'])) {
             if ($inserted > 0) {
                 $uploadStatus = "<span class='text-green-700'>Faculty upload and import successful! $inserted new record(s) added.";
                 if ($duplicateCount > 0) {
-                    $uploadStatus .= " $duplicateCount duplicate(s) skipped.";
+                    $uploadStatus .= " <span class='text-red-600 font-semibold'>$duplicateCount duplicate(s) skipped.</span>";
                 }
                 $uploadStatus .= "</span>";
             } else {
                 $uploadStatus = "<span class='text-yellow-700'>No new faculty records added.";
                 if ($duplicateCount > 0) {
-                    $uploadStatus .= " $duplicateCount duplicate(s) found.";
+                    $uploadStatus .= " <span class='text-red-600 font-semibold'>$duplicateCount duplicate(s) found.</span>";
                 }
                 $uploadStatus .= " Check your CSV format and try again.</span>";
+            }
+            
+            // Add detailed duplicate information if any
+            if (!empty($duplicateDetails)) {
+                $uploadStatus .= "<div class='mt-4 p-4 bg-red-50 border border-red-200 rounded-lg'>";
+                $uploadStatus .= "<h4 class='text-sm font-semibold text-red-800 mb-2'>Duplicate Details:</h4>";
+                $uploadStatus .= "<div class='space-y-2'>";
+                foreach ($duplicateDetails as $duplicate) {
+                    $uploadStatus .= "<div class='text-sm text-red-700'>";
+                    $uploadStatus .= "<strong>" . ucfirst($duplicate['type']) . ":</strong> ";
+                    $uploadStatus .= $duplicate['name'] . " (" . $duplicate['identifier'] . ") - ";
+                    $uploadStatus .= "<span class='text-red-600'>" . $duplicate['reason'] . "</span>";
+                    $uploadStatus .= "</div>";
+                }
+                $uploadStatus .= "</div></div>";
             }
         } else {
             // Student import logic (existing code)
@@ -459,6 +484,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csvFile'])) {
                 if ($stmtCheck->fetchColumn() > 0) {
                     $isDuplicate = true;
                     error_log("CSV Import: Duplicate found for student_id: $student_id");
+                    
+                    // Store duplicate details
+                    $duplicateDetails[] = [
+                        'type' => 'student',
+                        'identifier' => $student_id,
+                        'name' => $name,
+                        'email' => $email ?? 'N/A',
+                        'reason' => 'Student ID already exists'
+                    ];
                 }
                 $previewRows[] = [
                     'student_id' => $student_id,
@@ -497,15 +531,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csvFile'])) {
             if ($inserted > 0) {
                 $uploadStatus = "<span class='text-green-700'>Student upload and import successful! $inserted new record(s) added.";
                 if ($duplicateCount > 0) {
-                    $uploadStatus .= " $duplicateCount duplicate(s) skipped.";
+                    $uploadStatus .= " <span class='text-red-600 font-semibold'>$duplicateCount duplicate(s) skipped.</span>";
                 }
                 $uploadStatus .= "</span>";
             } else {
                 $uploadStatus = "<span class='text-yellow-700'>No new student records added.";
                 if ($duplicateCount > 0) {
-                    $uploadStatus .= " $duplicateCount duplicate(s) found.";
+                    $uploadStatus .= " <span class='text-red-600 font-semibold'>$duplicateCount duplicate(s) found.</span>";
                 }
                 $uploadStatus .= " Check your CSV format and try again.</span>";
+            }
+            
+            // Add detailed duplicate information if any
+            if (!empty($duplicateDetails)) {
+                $uploadStatus .= "<div class='mt-4 p-4 bg-red-50 border border-red-200 rounded-lg'>";
+                $uploadStatus .= "<h4 class='text-sm font-semibold text-red-800 mb-2'>Duplicate Details:</h4>";
+                $uploadStatus .= "<div class='space-y-2'>";
+                foreach ($duplicateDetails as $duplicate) {
+                    $uploadStatus .= "<div class='text-sm text-red-700'>";
+                    $uploadStatus .= "<strong>" . ucfirst($duplicate['type']) . ":</strong> ";
+                    $uploadStatus .= $duplicate['name'] . " (" . $duplicate['identifier'] . ") - ";
+                    $uploadStatus .= "<span class='text-red-600'>" . $duplicate['reason'] . "</span>";
+                    $uploadStatus .= "</div>";
+                }
+                $uploadStatus .= "</div></div>";
             }
         }
     } else {

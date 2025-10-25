@@ -32,7 +32,11 @@ try {
             // Delete student patient and related records
             $tables_to_clean = [
                 'prescriptions' => 'patient_id',
-                'appointments' => 'student_id'
+                'appointments' => 'student_id',
+                'notifications' => 'student_id',
+                'medication_referrals' => 'patient_id',
+                'clinic_visits' => 'patient_id',
+                'parent_alerts' => 'patient_id'
             ];
             
             // Delete related records first

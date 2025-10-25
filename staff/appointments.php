@@ -5069,7 +5069,24 @@ $conn->close();
 
                     popup.style.left = (e.clientX + 10) + 'px';
 
-                    popup.innerHTML = '<b>' + (doctorSchedule.profession || 'Physician') + '</b><br>Available: <span class="text-blue-600">' + doctorSchedule.schedule_time + '</span>';
+                    // Format time to 12-hour format with AM/PM
+                    const timeParts = doctorSchedule.schedule_time.split('-');
+                    let formattedTime = doctorSchedule.schedule_time;
+                    if (timeParts.length === 2) {
+                        const startTime = timeParts[0] ? new Date('2000-01-01 ' + timeParts[0]).toLocaleTimeString('en-US', {
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                        }) : '';
+                        const endTime = timeParts[1] ? new Date('2000-01-01 ' + timeParts[1]).toLocaleTimeString('en-US', {
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            hour12: true
+                        }) : '';
+                        formattedTime = startTime + ' - ' + endTime;
+                    }
+                    
+                    popup.innerHTML = '<b>' + (doctorSchedule.profession || 'Physician') + '</b><br>Available: <span class="text-blue-600">' + formattedTime + '</span>';
 
                     popup.id = 'doctorPopup';
 
